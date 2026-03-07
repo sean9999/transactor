@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"github.com/sean9999/transactor/services/user"
-	"github.com/sean9999/transactor/transactor"
+	"github.com/sean9999/transactor"
 )
 
 func main() {

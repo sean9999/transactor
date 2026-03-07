@@ -7,7 +7,7 @@ import (
 	"iter"
 	"time"
 
-	"github.com/sean9999/transactor/transactor"
+	"github.com/sean9999/transactor"
 )
 
 type Address struct {

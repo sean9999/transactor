@@ -7,7 +7,7 @@ import (
 	"iter"
 
 	"github.com/sean9999/transactor/services/address"
-	"github.com/sean9999/transactor/transactor"
+	"github.com/sean9999/transactor"
 )
 
 // CreateUserOp implements transactor.Op

@@ -8,14 +8,51 @@ import (
 	"github.com/google/uuid"
 )
 
+// Transactor takes an Op and has one public method: Transact()
 type Transactor struct {
 	rootOp Op
 }
 
 func NewTransactor(rootOp Op) *Transactor {
-	return &Transactor{
-		rootOp: rootOp,
+	return &Transactor{rootOp: rootOp}
+}
+
+// Transact does prepare() and then rollback(), or prepare() and then commit(),
+// Or prepare() and then commit() and then rollback(), depending on what happens.
+
+// Transact performs a transaction by operating recursively against an Op.
+func (tran *Transactor) Transact(ctx context.Context) error {
+
+	ctx = context.WithValue(ctx, "txId", uuid.New())
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	err := tran.prepare(ctx)
+	if err != nil {
+		//	if prepare fails, roll back
+		cancel() // cancel before rollback so that in-flight operations can be killed
+		err2 := tran.rollback()
+		if err2 != nil {
+			return fmt.Errorf("prepare failed: %w. then rollback failed: %w", err, err2)
+		}
+		return fmt.Errorf("prepare failed: %w. rollback success", err)
 	}
+
+	//	prepare worked, let's commit.
+	err = tran.commit(ctx)
+	if err != nil {
+		//	commit didn't work. Roll back.
+		cancel() // cancel before rollback so that in-flight operations can be killed
+		err2 := tran.rollback()
+		if err2 != nil {
+			return fmt.Errorf("commit failed: %w. then rollback failed: %w", err, err2)
+		}
+		return fmt.Errorf("commit failed: %w. rollback success", err)
+	}
+
+	//	commit() worked. Our whole thing worked.
+	return nil
+
 }
 
 // prepare the root Op and all descendents
@@ -77,40 +114,4 @@ func (tran *Transactor) rollback() error {
 	}
 
 	return nil
-}
-
-// Transact does prepare() and then rollback(), or prepare() and then commit(),
-// Or prepare() and then commit() and then rollback(), depending on what happens.
-func (tran *Transactor) Transact(ctx context.Context) error {
-
-	ctx = context.WithValue(ctx, "txId", uuid.New())
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	err := tran.prepare(ctx)
-	if err != nil {
-		//	if prepare fails, roll back
-		cancel() // cancel before rollback so that in-flight operations can be killed
-		err2 := tran.rollback()
-		if err2 != nil {
-			return fmt.Errorf("prepare failed: %w. then rollback failed: %w", err, err2)
-		}
-		return fmt.Errorf("prepare failed: %w. rollback success", err)
-	}
-
-	//	prepare worked, let's commit.
-	err = tran.commit(ctx)
-	if err != nil {
-		//	commit didn't work. Roll back.
-		cancel() // cancel before rollback so that in-flight operations can be killed
-		err2 := tran.rollback()
-		if err2 != nil {
-			return fmt.Errorf("commit failed: %w. then rollback failed: %w", err, err2)
-		}
-		return fmt.Errorf("commit failed: %w. rollback success", err)
-	}
-
-	//	commit() worked. Our whole thing worked.
-	return nil
-
 }

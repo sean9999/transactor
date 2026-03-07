@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/sean9999/transactor/services/address"
 	"github.com/sean9999/transactor/services/user"
 	"github.com/sean9999/transactor/transactor"
 )
@@ -17,40 +16,40 @@ func main() {
 	//	this is our input. The operation should flesh it out.
 	//	For example, User will get an ID from the database.
 	//	Each address will get lat/long from a child operation.
-	usr := &user.User{
-		Email: "frank@example.com",
-		Addresses: []address.Address{
-			address.Address{Street: "54 Tulane Hwy, Phoenix, Arizona"},
-			address.Address{Street: "16 Parkway Ave, New York City, New York"},
-		},
-	}
+	//usr := &user.User{
+	//	Email: "frank@example.com",
+	//	Addresses: []address.Address{
+	//		address.Address{Street: "54 Tulane Hwy, Phoenix, Arizona"},
+	//		address.Address{Street: "16 Parkway Ave, New York City, New York"},
+	//	},
+	//}
 
 	db, err := sql.Open("ramsql", "users")
 	if err != nil {
 		log.Fatal(err)
 	}
+	op := user.NewCreateUserOp(db)
 
-	op, err := user.BuildCreateUserOp(usr, db)
-	if err != nil {
-		log.Fatal(err)
-	}
+	op.Initialize("John Doe", "yes@yes.com")
 
-	tran := transactor.NewTransactor(op)
+	op.Name = "John Doe"
+	op.Email = "yes@yes.com"
+	trans := transactor.NewTransactor(op)
 
 	ctx := context.Background()
 
 	//	do the work
-	err = tran.Transact(ctx)
+	err = trans.Transact(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	prettyPrint(usr)
+	prettyPrint(op)
 
 }
 
-func prettyPrint(u *user.User) {
-	data, err := json.MarshalIndent(u, "", "\t")
+func prettyPrint(op *user.CreateUserOp) {
+	data, err := json.MarshalIndent(op, "", "\t")
 	if err != nil {
 		log.Fatal(err)
 	}

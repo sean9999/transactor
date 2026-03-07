@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"iter"
 
 	"github.com/sean9999/transactor/services/address"
 	"github.com/sean9999/transactor/transactor"
@@ -12,10 +13,28 @@ import (
 // CreateUserOp implements transactor.Op
 var _ transactor.Op = (*CreateUserOp)(nil)
 
+func NewCreateUserOp(db *sql.DB) *CreateUserOp {
+	uop := new(CreateUserOp)
+	uop.db = db
+	uop.children = make([]*address.CreateAddrsOp, 0)
+	return uop
+}
+
+func (op *CreateUserOp) Initialize(args ...any) error {
+	if len(args) != 2 {
+		return errors.New("expected 2 arguments: name and email")
+	}
+	op.Name = args[0].(string)
+	op.Email = args[1].(string)
+	return nil
+}
+
 // CreateUserOp is the operation that represents creating a User.
 type CreateUserOp struct {
-	User     *User
-	children []*address.CreateAddrOp // child transactors
+	UserId   int64
+	Name     string
+	Email    string
+	children []*address.CreateAddrsOp // child transactors
 	tx       *sql.Tx
 	db       *sql.DB
 }
@@ -29,24 +48,6 @@ func (op *CreateUserOp) Prepare(ctx context.Context) error {
 	return transactor.RunOrCancel(ctx, func() error {
 		return prepare(op)
 	})
-}
-
-func (op *CreateUserOp) PrepareChildren(ctx context.Context) error {
-
-	//	let's pretend we need to run these in sequence, for simplicity
-	for _, child := range op.children {
-		if err := child.Prepare(ctx); err != nil {
-			return err
-		}
-	}
-
-	addrs := make([]*address.Address, len(op.children))
-	for i, child := range op.children {
-		child.
-	}
-
-	return nil
-
 }
 
 func (op *CreateUserOp) Commit(ctx context.Context) error {
@@ -78,12 +79,8 @@ func (op *CreateUserOp) Rollback() error {
 
 }
 
-func (op *CreateUserOp) Children() []transactor.Op {
-	kids := make([]transactor.Op, len(op.children))
-	for i, child := range op.children {
-		kids[i] = child
-	}
-	return kids
+func (op *CreateUserOp) Children() iter.Seq[transactor.Op] {
+	return transactor.AsOps(op.children)
 }
 
 func prepare(op *CreateUserOp) error {
@@ -96,11 +93,11 @@ func prepare(op *CreateUserOp) error {
 	op.tx = tx
 
 	//	Add statements to our transaction.
-	//	We need userId for subsequent dependant operations
+	//	We need userId for later dependent operations
 	res, err := tx.Query(`
 		INSERT INTO User (name, email) 
 		VALUES ($1, $2) 
-		RETURNING id`, op.User.Name, op.User.Email)
+		RETURNING id`, op.Name, op.Email)
 	if err != nil {
 		return err
 	}
@@ -114,22 +111,8 @@ func prepare(op *CreateUserOp) error {
 	}
 
 	//	now we have our userId.
-	op.User.ID = userId
+	op.UserId = int64(userId)
 
 	return nil
 
-}
-
-func BuildCreateUserOp(u *User, db *sql.DB) (*CreateUserOp, error) {
-
-	//	things we know we need before we can even begin
-	if u.Email == "" {
-		return nil, errors.New("email is required")
-	}
-
-	op := new(CreateUserOp)
-	op.User = u
-	op.db = db
-	op.children = make([]*address.CreateAddrOp, 0, len(u.Addresses))
-	return op, nil
 }

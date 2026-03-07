@@ -1,7 +1,10 @@
 module github.com/sean9999/transactor
 
-go 1.25.3
+go 1.26.0
 
-require github.com/proullon/ramsql v0.1.4
+require (
+	github.com/google/uuid v1.6.0
+	github.com/proullon/ramsql v0.1.4
+)
 
-require golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
+require golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect

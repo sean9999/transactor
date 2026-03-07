@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"iter"
 	"time"
 
 	"github.com/sean9999/transactor/transactor"
@@ -17,13 +18,17 @@ type Address struct {
 	Id     int
 }
 
-var _ transactor.Op = (*CreateAddrOp)(nil)
+var _ transactor.Op = (*CreateAddrsOp)(nil)
 
-// CreateAddrOp represents the operation to create an Addr.
-type CreateAddrOp struct {
+// CreateAddrsOp represents the operation to create an Addr.
+type CreateAddrsOp struct {
 	Addr *Address
 	db   *sql.DB
 	tx   *sql.Tx
+}
+
+func (c *CreateAddrsOp) Initialize(args ...any) error {
+	return nil
 }
 
 func getLatLong(streetAddress string) (float64, float64, error) {
@@ -34,11 +39,11 @@ func getLatLong(streetAddress string) (float64, float64, error) {
 	return 45.612499, -73.707092, nil
 }
 
-func (c *CreateAddrOp) Children() []transactor.Op {
+func (c *CreateAddrsOp) Children() iter.Seq[transactor.Op] {
 	return nil
 }
 
-func (c *CreateAddrOp) Prepare(_ context.Context) error {
+func (c *CreateAddrsOp) Prepare(_ context.Context) error {
 
 	lat, long, err := getLatLong(c.Addr.Street)
 	if err != nil {
@@ -51,17 +56,17 @@ func (c *CreateAddrOp) Prepare(_ context.Context) error {
 	return nil
 }
 
-func (c *CreateAddrOp) Commit(_ context.Context) error {
+func (c *CreateAddrsOp) Commit(_ context.Context) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *CreateAddrOp) Rollback() error {
+func (c *CreateAddrsOp) Rollback() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-//func (a *CreateAddrOp) prepare(ctx context.Context) error {
+//func (a *CreateAddrsOp) prepare(ctx context.Context) error {
 //	if a == nil {
 //		return errors.New("Addr transactor is nil")
 //	}

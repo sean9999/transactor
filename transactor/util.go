@@ -2,8 +2,23 @@ package transactor
 
 import (
 	"context"
+	"iter"
+	"slices"
 	"sync"
 )
+
+// AsOps takes concrete types and returns them as interfaces.
+//
+//	This will panic if given bad input
+func AsOps[T Op](input []T) iter.Seq[Op] {
+	return func(yield func(Op) bool) {
+		for _, v := range input {
+			if !yield(v) {
+				return
+			}
+		}
+	}
+}
 
 // raceAll races Op operations, finishing each one and collecting all errors.
 func raceAll(ops []Op, fn func(Op) error) []error {
@@ -24,7 +39,7 @@ func raceAll(ops []Op, fn func(Op) error) []error {
 	}
 	wg.Wait()
 
-	//	drain errChan, turning it into an []error (or nil)
+	//	drain errChan, turning it into an []error
 	close(errChan)
 	var errs []error
 	for err := range errChan {
@@ -66,7 +81,7 @@ func reap(op Op, errs []error, fn func(Op) error) []error {
 		errs = append(errs, err)
 	}
 	if op.Children() != nil {
-		childErrs := raceAll(op.Children(), fn)
+		childErrs := raceAll(slices.Collect(op.Children()), fn)
 		errs = append(errs, childErrs...)
 	}
 	return reap(op, errs, fn)
@@ -80,7 +95,7 @@ func walkFromRoot(ctx context.Context, op Op, fn func(context.Context, Op) error
 		return err
 	}
 	if op.Children() != nil {
-		return raceUntil(ctx, op.Children(), fn)
+		return raceUntil(ctx, slices.Collect(op.Children()), fn)
 	}
 	return nil
 }

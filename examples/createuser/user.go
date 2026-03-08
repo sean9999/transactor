@@ -1,4 +1,4 @@
-package user
+package main
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"errors"
 	"iter"
 
-	"github.com/sean9999/transactor/services/address"
 	"github.com/sean9999/transactor"
 )
 
@@ -16,7 +15,7 @@ var _ transactor.Op = (*CreateUserOp)(nil)
 func NewCreateUserOp(db *sql.DB) *CreateUserOp {
 	uop := new(CreateUserOp)
 	uop.db = db
-	uop.children = make([]*address.CreateAddrsOp, 0)
+	uop.children = make([]*CreateAddrsOp, 0)
 	return uop
 }
 
@@ -34,7 +33,7 @@ type CreateUserOp struct {
 	UserId   int64
 	Name     string
 	Email    string
-	children []*address.CreateAddrsOp // child transactors
+	children []*CreateAddrsOp // child transactors
 	tx       *sql.Tx
 	db       *sql.DB
 }
@@ -95,12 +94,13 @@ func prepare(op *CreateUserOp) error {
 	//	Add statements to our transaction.
 	//	We need userId for later dependent operations
 	res, err := tx.Query(`
-		INSERT INTO User (name, email) 
-		VALUES ($1, $2) 
+		INSERT INTO User (name, email)
+		VALUES ($1, $2)
 		RETURNING id`, op.Name, op.Email)
 	if err != nil {
 		return err
 	}
+	defer res.Close()
 	var userId int
 	err = res.Scan(&userId)
 	if err != nil {

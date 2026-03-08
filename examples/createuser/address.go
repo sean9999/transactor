@@ -1,4 +1,4 @@
-package address
+package main
 
 import (
 	"context"
@@ -65,18 +65,3 @@ func (c *CreateAddrsOp) Rollback() error {
 	//TODO implement me
 	panic("implement me")
 }
-
-//func (a *CreateAddrsOp) prepare(ctx context.Context) error {
-//	if a == nil {
-//		return errors.New("Addr transactor is nil")
-//	}
-//	if ctx.Value("pleaseFail").(bool) == true {
-//		return fmt.Errorf("operation failed")
-//	}
-//
-//	//	fetch LatLong/long
-//	a.Addr.LatLong = rand.Float64()
-//	a.Addr.long = rand.Float64()
-//
-//	return nil
-//}

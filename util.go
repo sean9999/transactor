@@ -81,10 +81,11 @@ func reap(op Op, errs []error, fn func(Op) error) []error {
 		errs = append(errs, err)
 	}
 	if op.Children() != nil {
-		childErrs := raceAll(slices.Collect(op.Children()), fn)
-		errs = append(errs, childErrs...)
+		for child := range op.Children() {
+			errs = reap(child, errs, fn)
+		}
 	}
-	return reap(op, errs, fn)
+	return errs
 }
 
 // walkFromRoot walks an Op tree, starting from the root and cascading to the leaves.
